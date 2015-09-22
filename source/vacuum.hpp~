@@ -1,0 +1,16 @@
+/*! \file vacuum.hpp
+  \author Almog Yalinewich
+  \brief Vacuum boundary conditions
+ */
+
+#ifndef VACUUM_HPP
+#define VACUUM_HPP 1
+
+class Vacuum: public BoundaryCondition
+{
+public:
+
+private:
+};
+
+#endif // VACUUM_HPP

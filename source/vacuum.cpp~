@@ -1,0 +1,4 @@
+#include "vacuum.hpp"
+
+Vacuum:Vacuum(const RiemannSolver& rs, density):
+  rs_(rs), density_(density) {}
