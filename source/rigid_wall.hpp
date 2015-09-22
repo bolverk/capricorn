@@ -3,10 +3,14 @@
 
 #include "boundary_condition.hpp"
 
+//! \brief Rigid wall boundary conditions
 class RigidWall: public BoundaryCondition
 {
 public:
 
+  /*! \brief Class constructor
+    \param rs Riemann solver
+   */
   RigidWall(const RiemannSolver& rs);
 
   RiemannSolution calcFluxLeft(const HydroSnapshot& hs) const;
