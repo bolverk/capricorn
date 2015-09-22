@@ -8,10 +8,15 @@
 
 #include "boundary_condition.hpp"
 
+//! \brief Vacuum boundary conditions
 class Vacuum: public BoundaryCondition
 {
 public:
 
+  /*! \brief Class constructor
+    \param rs Riemann solver
+    \param density Tenuous density (in case vacuum is too extreme)
+   */
   Vacuum(const RiemannSolver& rs, double density=0);
 
   RiemannSolution calcFluxLeft(const HydroSnapshot& hs) const;
