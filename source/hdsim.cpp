@@ -54,6 +54,38 @@ void HydroSimulation::huddle(void)
   if(world.rank()<world.size()-1)
     boost::mpi::wait_all(right.begin(),right.end());
 }
+
+const vector<RiemannSolution> HydroSimulation::calc_pcm_fluxes
+(void) const
+{
+  const vector<Primitive>& cells = hs_.cells;
+  boost::mpi::environment env;
+  boost::mpi::communicator world;
+  vector<RiemannSolution> res(hs_.grid.size());
+  if(world.rank()==0){
+    res.at(0) = bc_.calcFluxLeft(hs_);
+    for(size_t i=1;i<res.size()-1;++i)
+      res.at(i) = rs_
+	(pair<Primitive,Primitive>
+	 (cells.at(i-1),
+	  cells.at(i)));
+    res.back() = rs_
+      (pair<Primitive,Primitive>
+       (cells.back(),
+	right_ghost_));
+  }
+  else{
+    for(size_t i=0;i<res.size()-1;++i)
+      res.at(i) = rs_
+	(pair<Primitive,Primitive>
+	 (cells.at(i),cells.at(i+1)));
+    res.back() = world.size() - 1 == world.rank() ?
+      bc_.calcFluxRight(hs_) :
+      rs_(pair<Primitive,Primitive>
+	  (cells.back(),right_ghost_));
+  }
+  return res;
+}
 #endif // WITH_MPI
 
 void HydroSimulation::timeAdvance(double dt_candidate)
@@ -65,8 +97,12 @@ void HydroSimulation::timeAdvance(double dt_candidate)
     calc_max_time_step(hs_,eos_) :
     fmin(dt_candidate, cfl_*calc_max_time_step(hs_,eos_));
 
-  const vector<RiemannSolution> fluxes = 
+  const vector<RiemannSolution> fluxes =
+#ifdef WITH_MPI
+    calc_pcm_fluxes();
+#else
     calc_fluxes(hs_,rs_,bc_,sr_);
+#endif // WITH_MPI
 
   update_momenta(fluxes,dt,hs_.grid,geom_,momenta_);
 
@@ -76,6 +112,10 @@ void HydroSimulation::timeAdvance(double dt_candidate)
 
   hs_.cells = cold_flows_.retrieve_primitives
     (hs_.grid, geom_, masses_, momenta_, energies_, eos_);
+
+#ifdef WITH_MPI
+  huddle();
+#endif // WITH_MPI
 
   time_ += dt;
   ++cycle_;

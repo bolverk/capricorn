@@ -65,6 +65,8 @@ private:
 
 #ifdef WITH_MPI
   void huddle(void);
+
+  const vector<RiemannSolution> calc_pcm_fluxes(void) const;
 #endif // WITH_MPI
 
   const Geometry& geom_;

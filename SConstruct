@@ -14,7 +14,7 @@ elif mode=='clang_release':
     cflags = '-Weverything -Werror -ferror-limit=1 -Wno-error=padded -O3 '
 elif mode=='parallel_release':
     compiler='mpiCC'
-    cflags = ' -O3 -DWITH_MPI -Wall -Wextra -pedantic -Wfatal-errors '
+    cflags = ' -O3 -DWITH_MPI -Wall -Wextra -pedantic -Wfatal-errors -Werror'
 else:
     raise NameError('unsupported mode')
 
