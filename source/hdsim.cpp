@@ -1,6 +1,7 @@
 #include <cmath>
 #include "hdsim.hpp"
 #include "hydrodynamics.hpp"
+#include <boost/mpi.hpp>
 
 HydroSimulation::HydroSimulation
 (const Geometry& geom,
@@ -21,7 +22,39 @@ HydroSimulation::HydroSimulation
   cfl_(0.3),
   time_(0),
   cycle_(0),
-  cold_flows_() {}
+  cold_flows_()
+#ifdef WITH_MPI
+  ,
+  left_ghost_edge_(0),
+  right_ghost_()
+#endif // WITH_MPI
+{
+#ifdef WITH_MPI
+  huddle();
+#endif // WITH_MPI  
+}
+
+#ifdef WITH_MPI
+void HydroSimulation::huddle(void)
+{
+  boost::mpi::environment env;
+  boost::mpi::communicator world;
+  vector<boost::mpi::request> left(2);
+  vector<boost::mpi::request> right(2);
+  if(world.rank()>0){
+    left.at(0) = world.isend(world.rank()-1,0,hs_.cells.front());
+    left.at(1) = world.irecv(world.rank()-1,1,left_ghost_edge_);
+  }
+  if(world.rank()<world.size()-1){
+    right.at(0) = world.isend(world.rank()+1,1,hs_.grid.back());
+    right.at(1) = world.irecv(world.rank()+1,0,right_ghost_);
+  }
+  if(world.rank()>0)
+    boost::mpi::wait_all(left.begin(),left.end());
+  if(world.rank()<world.size()-1)
+    boost::mpi::wait_all(right.begin(),right.end());
+}
+#endif // WITH_MPI
 
 void HydroSimulation::timeAdvance(double dt_candidate)
 {

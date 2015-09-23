@@ -31,6 +31,16 @@ public:
 
   //! \brief Velocity
   double velocity;
+
+#ifdef WITH_MPI
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version)
+  {
+    ar & density;
+    ar & pressure;
+    ar & velocity;
+  }
+#endif // WITH_MPI
 };
 
 #endif // PRIMITIVE_HPP

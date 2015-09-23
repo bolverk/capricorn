@@ -12,6 +12,9 @@ elif mode=='gcc_debug':
 elif mode=='clang_release':
     compiler= 'clang++'
     cflags = '-Weverything -Werror -ferror-limit=1 -Wno-error=padded -O3 '
+elif mode=='parallel_release':
+    compiler='mpiCC'
+    cflags = ' -O3 -DWITH_MPI -Wall -Wextra -pedantic -Wfatal-errors '
 else:
     raise NameError('unsupported mode')
 

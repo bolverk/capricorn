@@ -3,6 +3,9 @@
 #include <cassert>
 #include "hydrodynamics.hpp"
 #include "utilities.hpp"
+#ifdef WITH_MPI
+#include <boost/mpi.hpp>
+#endif // WITH_MPI
 
 double calc_max_time_step(const HydroSnapshot& hs,
 			  const EquationOfState& eos)
@@ -16,7 +19,21 @@ double calc_max_time_step(const HydroSnapshot& hs,
     assert(width>0);
     max_its = fmax(max_its,max_speed/width);
   }
-  assert(max_its>0);  
+
+#ifdef WITH_MPI
+  boost::mpi::environment env;
+  boost::mpi::communicator world;
+  double res = 0;
+  boost::mpi::all_reduce
+    (world,
+     max_its,
+     res,
+     boost::mpi::maximum<double>());
+  assert(res>0);
+  return 1.0/res;
+#endif // WITH_MPI
+  
+  assert(max_its>0);
   return 1/max_its;
 }
 

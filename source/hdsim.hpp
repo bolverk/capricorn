@@ -62,6 +62,11 @@ public:
   int getCycle(void) const;
 
 private:
+
+#ifdef WITH_MPI
+  void huddle(void);
+#endif // WITH_MPI
+
   const Geometry& geom_;
   HydroSnapshot hs_;
   const EquationOfState& eos_;
@@ -75,6 +80,10 @@ private:
   double time_;
   int cycle_;
   ColdFlows cold_flows_;
+#ifdef WITH_MPI
+  double left_ghost_edge_;
+  Primitive right_ghost_;
+#endif // WITH_MPI
 };
 
 #endif // HDSIM_HPP
