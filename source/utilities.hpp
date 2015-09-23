@@ -15,9 +15,9 @@ using std::size_t;
  */
 template<class T> T min_term(const vector<T>& list)
 {
-  T res = list[0];
+  T res = list.at(0);
   for(size_t i=1, endp=list.size();i<endp;++i)
-    res = fmin(res,list[i]);
+    res = fmin(res,list.at(i));
   return res;
 }
 

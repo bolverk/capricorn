@@ -8,6 +8,9 @@ if mode=='gcc_release':
 elif mode=='clang_release':
     compiler = 'clang++'
     cflags = '-Weverything -Werror -ferror-limit=1 -Wno-error=padded -O3 '
+elif mode=='gcc_debug':
+    compiler = 'g++'
+    cflags = ' -Wfatal-errors -O0 -g '
 else:
     raise NameError('unsupported mode')
 
@@ -15,8 +18,10 @@ build_dir = 'build/'+mode
 env = Environment(ENV = os.environ,
                   CXX=compiler,
                   CPPPATH=['./source','../../source'],
-                  LIBPATH=['../../'+build_dir,os.environ['HDF5_LIB_PATH']],
-                  LIBS=['hdf5','hdf5_cpp','capricorn'],
+                  LIBPATH=['../../'+build_dir,
+                           build_dir,
+                           os.environ['HDF5_LIB_PATH']],
+                  LIBS=['capricorn','hdf5','hdf5_cpp'],
                   CXXFLAGS=cflags)
 env.VariantDir(build_dir,'source')
 env.Program(build_dir+'/capricorn',

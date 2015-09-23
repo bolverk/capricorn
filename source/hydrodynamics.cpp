@@ -7,48 +7,17 @@
 double calc_max_time_step(const HydroSnapshot& hs,
 			  const EquationOfState& eos)
 {
-  /*
-  class MaxTimeStepCalculator: public Index2Member<pair<bool,double> >
-  {
-  public:
-
-    MaxTimeStepCalculator(const HydroSnapshot& hs_i,
-			  const EquationOfState& eos_i):
-      hs_(hs_i), eos_(eos_i) {}
-
-    size_t getLength(void) const
-    {
-      return hs_.cells.size();
-    }
-
-    pair<bool,double> operator()(size_t i) const
-    {
-      const double width = hs_.grid[i+1] - hs_.grid[i];
-      const Primitive& cell = hs_.cells[i];
-      const double max_speed = fabs(cell.velocity)+
-	eos_.dp2c(cell.density, cell.pressure);
-      return width/max_speed;
-    }
-
-  private:
-    const HydroSnapshot& hs_;
-    const EquationOfState& eos_;    
-  } max_time_step_calculator(hs,eos);
-  return min_term(serial_generate(max_time_step_calculator));*/
-
-  vector<double> valid_time_steps;
+  double max_its = 0;
   for(size_t i=0;i<hs.cells.size();++i){
-    const Primitive cell = hs.cells[i];
+    const Primitive& cell = hs.cells[i];
     const double max_speed = fabs(cell.velocity)+
       eos.dp2c(cell.density, cell.pressure);
-    if(std::numeric_limits<double>::epsilon()<max_speed){
-      const double width = hs.grid[i+1] - hs.grid[i];
-      assert(width>std::numeric_limits<double>::epsilon());
-      valid_time_steps.push_back(width/max_speed);
-    }
+    const double width = hs.grid[i+1] - hs.grid[i];
+    assert(width>0);
+    max_its = fmax(max_its,max_speed/width);
   }
-  
-  return min_term(valid_time_steps);
+  assert(max_its>0);  
+  return 1/max_its;
 }
 
 vector<RiemannSolution> calc_fluxes(const HydroSnapshot& hs,
