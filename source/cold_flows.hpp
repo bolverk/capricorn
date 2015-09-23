@@ -9,6 +9,7 @@
 #include <vector>
 #include "hydro_snapshot.hpp"
 #include "equation_of_state.hpp"
+#include "geometry.hpp"
 
 using std::vector;
 
@@ -29,8 +30,10 @@ public:
     \param hs Hydrodynamic snapshot
     \param eos Equation of state
    */
-  void initialize_entropies(const HydroSnapshot& hs,
-			    const EquationOfState& eos);
+  void initialize_entropies
+  (const HydroSnapshot& hs,
+   const EquationOfState& eos,
+   const Geometry& geom);
 
   /*! \brief Retrieves primitives
     \param grid Computational grid
@@ -41,6 +44,7 @@ public:
    */
   vector<Primitive> retrieve_primitives
   (const vector<double>& grid,
+   const Geometry& geom,
    const vector<double>& masses,
    const vector<double>& momenta,
    vector<double>& energies,

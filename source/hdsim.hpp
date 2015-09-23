@@ -28,11 +28,13 @@ public:
     \param bc Boundary condition
     \param sr Spatial reconstruction scheme
    */
-  HydroSimulation(const HydroSnapshot& hs,
-		  const EquationOfState& eos,
-		  const RiemannSolver& rs,
-		  const BoundaryCondition& bc,
-		  const SpatialReconstruction& sr);
+  HydroSimulation
+  (const Geometry& geom,
+   const HydroSnapshot& hs,
+   const EquationOfState& eos,
+   const RiemannSolver& rs,
+   const BoundaryCondition& bc,
+   const SpatialReconstruction& sr);
 
   /*! \brief Advances the simulation in time
     \param dt_candidate Suggestion for next time step
@@ -60,6 +62,7 @@ public:
   int getCycle(void) const;
 
 private:
+  const Geometry& geom_;
   HydroSnapshot hs_;
   const EquationOfState& eos_;
   const RiemannSolver& rs_;

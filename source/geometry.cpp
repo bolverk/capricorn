@@ -5,9 +5,9 @@ Geometry::~Geometry(void) {}
 
 Planar::Planar(void) {}
 
-double Planar::calcVolume(double /*radius*/) const
+double Planar::calcVolume(double radius) const
 {
-  return 1;
+  return radius;
 }
 
 double Planar::calcArea(double /*radius*/) const

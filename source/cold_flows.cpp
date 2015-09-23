@@ -12,16 +12,19 @@ void ColdFlows::activate(double threshold)
   threshold_ = threshold;
 }
 
-void ColdFlows::initialize_entropies(const HydroSnapshot& hs,
-				     const EquationOfState& eos)
+void ColdFlows::initialize_entropies
+(const HydroSnapshot& hs,
+ const EquationOfState& eos,
+ const Geometry& geom)
 {
   if(active_){
     class EntropyCalculator: public Index2Member<double>
     {
     public:
       EntropyCalculator(const HydroSnapshot& hs_i,
-			const EquationOfState& eos_i):
-	hs_(hs_i), eos_(eos_i) {}
+			const EquationOfState& eos_i,
+			const Geometry& geom_i):
+	hs_(hs_i), eos_(eos_i), geom_(geom_i) {}
       
       size_t getLength(void) const
       {
@@ -30,8 +33,10 @@ void ColdFlows::initialize_entropies(const HydroSnapshot& hs,
 
       double operator()(size_t i) const
       {
-	const double width = hs_.grid[i+1] - hs_.grid[i];
-	return width*hs_.cells[i].density*
+	const double volume =
+	  geom_.calcVolume(hs_.grid[i+1]) -
+	  geom_.calcVolume(hs_.grid[i]);
+	return volume*hs_.cells[i].density*
 	  eos_.dp2s(hs_.cells[i].density,
 		    hs_.cells[i].pressure);
       }
@@ -39,7 +44,8 @@ void ColdFlows::initialize_entropies(const HydroSnapshot& hs,
     private:
       const HydroSnapshot& hs_;
       const EquationOfState& eos_;
-    } entropy_calculator(hs, eos);
+      const Geometry& geom_;
+    } entropy_calculator(hs, eos, geom);
 
     entropies_ = serial_generate(entropy_calculator);
   }
@@ -47,6 +53,7 @@ void ColdFlows::initialize_entropies(const HydroSnapshot& hs,
 
 vector<Primitive> ColdFlows::retrieve_primitives
 (const vector<double>& grid,
+ const Geometry& geom,
  const vector<double>& masses,
  const vector<double>& momenta,
  vector<double>& energies,
@@ -57,6 +64,7 @@ vector<Primitive> ColdFlows::retrieve_primitives
   public:
 
     PrimitiveCalculator(const vector<double>& grid_i,
+			const Geometry& geom_i,
 			const vector<double>& masses_i,
 			const vector<double>& momenta_i,
 			vector<double>& energies_i,
@@ -65,6 +73,7 @@ vector<Primitive> ColdFlows::retrieve_primitives
 			const bool active_i,
 			const double threshold_i):
       grid_(grid_i),
+      geom_(geom_i),
       masses_(masses_i),
       momenta_(momenta_i),
       energies_(energies_i),
@@ -80,9 +89,10 @@ vector<Primitive> ColdFlows::retrieve_primitives
 
     Primitive operator()(size_t i) const
     {
-      const double width = 
-	grid_[i+1] - grid_[i];
-      const double density = masses_[i]/width;
+      const double volume = 
+	geom_.calcVolume(grid_[i+1]) -
+	geom_.calcVolume(grid_[i]);
+      const double density = masses_[i]/volume;
       const double velocity = momenta_[i]/masses_[i];
       const double kinetic_energy = 
 	0.5*pow(velocity,2);
@@ -104,6 +114,7 @@ vector<Primitive> ColdFlows::retrieve_primitives
 
   private:
     const vector<double>& grid_;
+    const Geometry& geom_;
     const vector<double>& masses_;
     const vector<double>& momenta_;
     vector<double>& energies_;
@@ -111,8 +122,16 @@ vector<Primitive> ColdFlows::retrieve_primitives
     const vector<double>& entropies__;
     const bool active__;
     const double threshold__;
-  } primitive_calculator(grid,masses,momenta,energies,eos,
-			 entropies_, active_, threshold_);
+  } primitive_calculator
+      (grid,
+       geom,
+       masses,
+       momenta,
+       energies,
+       eos,
+       entropies_,
+       active_,
+       threshold_);
 
   return serial_generate(primitive_calculator);
 }

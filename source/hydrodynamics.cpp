@@ -61,14 +61,18 @@ vector<RiemannSolution> calc_fluxes(const HydroSnapshot& hs,
   return serial_generate(flux_calculator);
 }
 
-vector<double> calc_masses(const HydroSnapshot& hs)
+vector<double> calc_masses
+(const HydroSnapshot& hs,
+ const Geometry& geom)
 {
   class MassCalculator: public Index2Member<double>
   {
   public:
 
-    MassCalculator(const HydroSnapshot& hs_i):
-    hs_(hs_i) {}
+    MassCalculator
+    (const HydroSnapshot& hs_i,
+     const Geometry& geom_i):
+      hs_(hs_i), geom_(geom_i) {}
 
     size_t getLength(void) const
     {
@@ -77,26 +81,32 @@ vector<double> calc_masses(const HydroSnapshot& hs)
 
     double operator()(size_t i) const
     {
-      const double width = 
-	hs_.grid[i+1] - hs_.grid[i];
-      return width*hs_.cells[i].density;
+      const double volume = 
+	geom_.calcVolume(hs_.grid[i+1]) -
+	geom_.calcVolume(hs_.grid[i]);
+      return volume*hs_.cells[i].density;
     }
 
   private:
     const HydroSnapshot& hs_;
-  } mass_calculator(hs);
+    const Geometry& geom_;
+  } mass_calculator(hs, geom);
 
   return serial_generate(mass_calculator);
 }
 
-vector<double> calc_momenta(const HydroSnapshot& hs)
+vector<double> calc_momenta
+(const HydroSnapshot& hs,
+ const Geometry& geom)
 {
   class MomentumCalculator: public Index2Member<double>
   {
   public:
 
-    MomentumCalculator(const HydroSnapshot& hs_i):
-    hs_(hs_i) {}
+    MomentumCalculator
+    (const HydroSnapshot& hs_i,
+     const Geometry& geom_i):
+      hs_(hs_i), geom_(geom_i) {}
 
     size_t getLength(void) const
     {
@@ -105,28 +115,36 @@ vector<double> calc_momenta(const HydroSnapshot& hs)
 
     double operator()(size_t i) const
     {
-      const double width = 
-	hs_.grid[i+1] - hs_.grid[i];
-      return width*hs_.cells[i].density*hs_.cells[i].velocity;
+      const double volume = 
+	geom_.calcVolume(hs_.grid[i+1]) -
+	geom_.calcVolume(hs_.grid[i]);
+      return volume*hs_.cells[i].density*hs_.cells[i].velocity;
     }
 
   private:
     const HydroSnapshot& hs_;
-  } momentum_calculator(hs);
+    const Geometry& geom_;
+  } momentum_calculator(hs, geom);
 
   return serial_generate(momentum_calculator);
 }
 
-vector<double> calc_energies(const HydroSnapshot& hs,
-			     const EquationOfState& eos)
+vector<double> calc_energies
+(const HydroSnapshot& hs,
+ const EquationOfState& eos,
+ const Geometry& geom)
 {
   class EnergyCalculator: public Index2Member<double>
   {
   public:
 
-    EnergyCalculator(const HydroSnapshot& hs_i,
-		     const EquationOfState& eos_i):
-      hs_(hs_i), eos_(eos_i) {}
+    EnergyCalculator
+    (const HydroSnapshot& hs_i,
+     const EquationOfState& eos_i,
+     const Geometry& geom_i):
+      hs_(hs_i),
+      eos_(eos_i),
+      geom_(geom_i) {}
 
     size_t getLength(void) const
     {
@@ -135,14 +153,15 @@ vector<double> calc_energies(const HydroSnapshot& hs,
 
     double operator()(size_t i) const
     {
-      const double width = 
-	hs_.grid[i+1] - hs_.grid[i];
+      const double volume = 
+	geom_.calcVolume(hs_.grid[i+1]) -
+	geom_.calcVolume(hs_.grid[i]);
       const Primitive& cell = hs_.cells[i];
       const double kinetic_energy = 
 	0.5*pow(cell.velocity,2);
       const double thermal_energy = 
 	eos_.dp2e(cell.density,cell.pressure);
-      return width*cell.density*
+      return volume*cell.density*
 	(thermal_energy+kinetic_energy);
     }
 
@@ -150,22 +169,32 @@ vector<double> calc_energies(const HydroSnapshot& hs,
 
     const HydroSnapshot& hs_;
     const EquationOfState& eos_;
-  } energy_calculator(hs, eos);
+    const Geometry& geom_;
+  } energy_calculator(hs, eos, geom);
   
   return serial_generate(energy_calculator);
 }
 
-void update_momenta(const vector<RiemannSolution>& fluxes,
-		    double dt,
-		    vector<double>& momenta)
+void update_momenta
+(const vector<RiemannSolution>& fluxes,
+ double dt,
+ const vector<double>& edges,
+ const Geometry& geom,
+ vector<double>& momenta)
 {
   class MomentumDifferenceCalculator: public Index2Member<double>
   {
   public:
 
-    MomentumDifferenceCalculator(const vector<RiemannSolution>& fluxes_i,
-				 double dt_i):
-      fluxes_(fluxes_i), dt_(dt_i) {}
+    MomentumDifferenceCalculator
+    (const vector<RiemannSolution>& fluxes_i,
+     const vector<double>& edges_i,
+     const Geometry& geom_i,
+     double dt_i):
+      fluxes_(fluxes_i),
+      edges_(edges_i),
+      geom_(geom_i),
+      dt_(dt_i) {}
 
     size_t getLength(void) const
     {
@@ -174,31 +203,43 @@ void update_momenta(const vector<RiemannSolution>& fluxes,
 
     double operator()(size_t i) const
     {
-      return dt_*(fluxes_[i].pressure-
-		  fluxes_[i+1].pressure);
+      return dt_*
+	(fluxes_[i].pressure*geom_.calcArea(edges_[i])-
+	 fluxes_[i+1].pressure*geom_.calcArea(edges_[i+1]));
     }
 
   private:
 
     const vector<RiemannSolution>& fluxes_;
+    const vector<double>& edges_;
+    const Geometry& geom_;
     const double dt_;
-  } momentum_difference_calculator(fluxes, dt);
+  } momentum_difference_calculator(fluxes, edges, geom, dt);
 
   serial_increment(serial_generate(momentum_difference_calculator),
 		   momenta);
 }
 
-void update_energies(const vector<RiemannSolution>& fluxes,
-		     double dt,
-		     vector<double>& energies)
+void update_energies
+(const vector<RiemannSolution>& fluxes,
+ double dt,
+ const vector<double>& edges,
+ const Geometry& geom,
+ vector<double>& energies)
 {
   class EnergyDifferenceCalculator: public Index2Member<double>
   {
   public:
 
-    EnergyDifferenceCalculator(const vector<RiemannSolution>& fluxes_i,
-			       double dt_i):
-      fluxes_(fluxes_i), dt_(dt_i) {}
+    EnergyDifferenceCalculator
+    (const vector<RiemannSolution>& fluxes_i,
+     const vector<double>& edges_i,
+     const Geometry& geom_i,
+     double dt_i):
+      fluxes_(fluxes_i),
+      edges_(edges_i),
+      geom_(geom_i),
+      dt_(dt_i) {}
 
     size_t getLength(void) const
     {
@@ -207,14 +248,19 @@ void update_energies(const vector<RiemannSolution>& fluxes,
 
     double operator()(size_t i) const
     {
-      return dt_*(fluxes_[i].pressure*fluxes_[i].velocity-
-		 fluxes_[i+1].pressure*fluxes_[i+1].velocity);
+      return dt_*
+	(fluxes_[i].pressure*fluxes_[i].velocity*
+	 geom_.calcArea(edges_[i])-
+	 fluxes_[i+1].pressure*fluxes_[i+1].velocity*
+	 geom_.calcArea(edges_[i+1]));
     }
 
   private:
     const vector<RiemannSolution>& fluxes_;
+    const vector<double>& edges_;
+    const Geometry& geom_;
     const double dt_;
-  } energy_difference_calculator(fluxes, dt);
+  } energy_difference_calculator(fluxes, edges, geom, dt);
 
   serial_increment(serial_generate(energy_difference_calculator),
 		   energies);
