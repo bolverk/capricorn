@@ -1,7 +1,9 @@
 #include <cmath>
 #include "hdsim.hpp"
 #include "hydrodynamics.hpp"
+#ifdef WITH_MPI
 #include <boost/mpi.hpp>
+#endif // WITH_MPI
 
 HydroSimulation::HydroSimulation
 (const Geometry& geom,

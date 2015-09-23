@@ -34,7 +34,12 @@ public:
 
 #ifdef WITH_MPI
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int version);
+  void serialize(Archive& ar, const unsigned int /*version*/)
+{
+  ar & density;
+  ar & pressure;
+  ar & velocity;
+}
 #endif // WITH_MPI
 };
 
