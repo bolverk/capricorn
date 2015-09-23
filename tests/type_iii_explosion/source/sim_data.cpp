@@ -2,12 +2,14 @@
 #include "sim_data.hpp"
 
 SimData::SimData(void):
+  geom_(),
   eos_(5./3.),
   rs_(eos_),
   bc_(rs_),
   sr_(),
   sim_
-  (calc_init_cond(),
+  (geom_,
+   calc_init_cond(),
    eos_,
    rs_,
    bc_,

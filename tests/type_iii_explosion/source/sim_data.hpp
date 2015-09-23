@@ -16,6 +16,7 @@ public:
   HydroSimulation& getSim(void);
 
 private:
+  const Spherical geom_;
   const IdealGas eos_;
   const HLL rs_;
   const RigidWall bc_;
