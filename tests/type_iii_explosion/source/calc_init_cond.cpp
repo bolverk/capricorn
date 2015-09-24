@@ -1,8 +1,5 @@
 #include <cmath>
 #include "calc_init_cond.hpp"
-#ifdef WITH_MPI
-#include <boost/mpi.hpp>
-#endif // WITH_MPI
 
 using std::size_t;
 
@@ -18,7 +15,12 @@ namespace{
 }
 #endif // WITH_MPI
 
-HydroSnapshot calc_init_cond(void)
+HydroSnapshot calc_init_cond
+(
+#ifdef WITH_MPI
+ const boost::mpi::communicator& world
+#endif // WITH_MPI
+ )
 {
   const double dr2r = 0.1;
   const double r_min = 1e-2;
@@ -34,12 +36,10 @@ HydroSnapshot calc_init_cond(void)
     cells.at(i).velocity = 0;
   }
 #ifdef WITH_MPI
-  boost::mpi::environment env;
-  boost::mpi::communicator world;
   vector<size_t> cell_dist_table
     (static_cast<size_t>(world.size()));
   assert(cell_dist_table.size()>0);
-  for(size_t i=0;cells.size();++i)
+  for(size_t i=0;i<cells.size();++i)
     ++cell_dist_table.at(i%cell_dist_table.size());
   const vector<size_t> boundaries =
     cumsum(cell_dist_table);

@@ -6,12 +6,20 @@
 #include "hll.hpp"
 #include "rigid_wall.hpp"
 #include "pcm.hpp"
+#ifdef WITH_MPI
+#include <boost/mpi.hpp>
+#endif // WITH_MPI
 
 class SimData
 {
 public:
 
-  SimData(void);
+  SimData
+  (
+#ifdef WITH_MPI
+   const boost::mpi::communicator& world
+#endif // WITH_MPI
+   );
 
   HydroSimulation& getSim(void);
 

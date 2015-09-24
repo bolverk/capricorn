@@ -6,9 +6,6 @@
 #include "hdsim.hpp"
 #include "my_main_loop.hpp"
 #include "hdf5_diagnostics.hpp"
-#ifdef WITH_MPI
-#include "boost/mpi.hpp"
-#endif // WITH_MPI
 
 using std::ofstream;
 using std::endl;
@@ -63,11 +60,14 @@ namespace {
     mutable int counter_;
     };*/
 
-  bool shock_reached_end(const HydroSnapshot& hs)
+  bool shock_reached_end
+  (const HydroSnapshot& hs
+#ifdef WITH_MPI
+   ,const boost::mpi::communicator& world
+#endif // WITH_MPI
+   )
   {
 #ifdef WITH_MPI
-    boost::mpi::environment env;
-    boost::mpi::communicator world;
     bool res;
     if(world.rank()==world.size()-1){
       assert(hs.cells.size()>10);
@@ -81,13 +81,13 @@ namespace {
   }
 }
 
-void my_main_loop(HydroSimulation& sim)
-{
+void my_main_loop
+(HydroSimulation& sim
 #ifdef WITH_MPI
-  boost::mpi::environment env;
-  boost::mpi::communicator world;
+ ,const boost::mpi::communicator& world
 #endif // WITH_MPI
-
+ )
+{
 #ifdef WITH_MPI
   write_snapshot_to_hdf5
     (sim,"initial_"+
@@ -99,7 +99,12 @@ void my_main_loop(HydroSimulation& sim)
 
   assert(sim.getSnapshot().cells.size()>10);
   //  const SelfSimilarSnapshots diag(1);
-  while(!shock_reached_end(sim.getSnapshot())){
+  while(!shock_reached_end
+	(sim.getSnapshot()
+#ifdef WITH_MPI
+	 ,world
+#endif // WITH_MPI
+	 )){
     sim.timeAdvance();
     assert(sim.getCycle()<1e6);
 #ifdef WITH_MPI
