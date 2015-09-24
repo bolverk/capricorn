@@ -15,24 +15,10 @@ double calc_max_time_step(const HydroSnapshot& hs,
     const Primitive& cell = hs.cells[i];
     const double max_speed = fabs(cell.velocity)+
       eos.dp2c(cell.density, cell.pressure);
-    const double width = hs.grid[i+1] - hs.grid[i];
+    const double width = hs.grid.at(i+1) - hs.grid.at(i);
     assert(width>0);
     max_its = fmax(max_its,max_speed/width);
-  }
-
-#ifdef WITH_MPI
-  boost::mpi::environment env;
-  boost::mpi::communicator world;
-  double res = 0;
-  boost::mpi::all_reduce
-    (world,
-     max_its,
-     res,
-     boost::mpi::maximum<double>());
-  assert(res>0);
-  return 1.0/res;
-#endif // WITH_MPI
-  
+  }  
   assert(max_its>0);
   return 1/max_its;
 }

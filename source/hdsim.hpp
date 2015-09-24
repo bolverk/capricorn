@@ -13,6 +13,9 @@
 #include "riemann_solver.hpp"
 #include "boundary_condition.hpp"
 #include "cold_flows.hpp"
+#ifdef WITH_MPI
+#include <boost/mpi.hpp>
+#endif // WITH_MPI
 
 using std::vector;
 
@@ -34,7 +37,11 @@ public:
    const EquationOfState& eos,
    const RiemannSolver& rs,
    const BoundaryCondition& bc,
-   const SpatialReconstruction& sr);
+   const SpatialReconstruction& sr
+#ifdef WITH_MPI
+   ,const boost::mpi::communicator& world
+#endif //WITH_MPI
+   );
 
   /*! \brief Advances the simulation in time
     \param dt_candidate Suggestion for next time step
@@ -67,6 +74,8 @@ private:
   void huddle(void);
 
   const vector<RiemannSolution> calc_pcm_fluxes(void) const;
+
+  double calc_time_step(void) const;
 #endif // WITH_MPI
 
   const Geometry& geom_;
@@ -83,6 +92,7 @@ private:
   int cycle_;
   ColdFlows cold_flows_;
 #ifdef WITH_MPI
+  const boost::mpi::communicator& world_;
   double left_ghost_edge_;
   Primitive right_ghost_;
 #endif // WITH_MPI

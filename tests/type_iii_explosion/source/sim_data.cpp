@@ -23,7 +23,11 @@ SimData::SimData
    eos_,
    rs_,
    bc_,
-   sr_) {}
+   sr_
+#ifdef WITH_MPI
+   ,world
+#endif // WITH_MPI
+   ) {}
 
 HydroSimulation& SimData::getSim(void)
 {
