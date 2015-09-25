@@ -72,7 +72,7 @@ const vector<RiemannSolution> HydroSimulation::calc_pcm_fluxes
   res.back() = world_.rank()==world_.size()-1 ?
     bc_.calcFluxRight(hs_) :
     rs_(pair<Primitive,Primitive>
-	(hs_.cells.front(),right_ghost_));
+	(hs_.cells.back(),right_ghost_));
   return res;
 }
 
