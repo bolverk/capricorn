@@ -39,6 +39,12 @@ HydroSimulation::HydroSimulation
 }
 
 #ifdef WITH_MPI
+
+const boost::mpi::communicator& HydroSimulation::getWorld(void) const
+{
+  return world_;
+}
+
 void HydroSimulation::huddle(void)
 {
   vector<boost::mpi::request> left(2);

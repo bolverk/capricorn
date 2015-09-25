@@ -20,20 +20,57 @@ namespace {
     f.close();
   }
 
-  /*
-  size_t find_positive_index
+  size_t find_position_index
   (const vector<double>& edges,
    double r)
   {
-    for(size_t i=0;i<edges.size();++i){
+    for(size_t i=1;i<edges.size();++i){
       if(edges.at(i)>r)
-	return i;
+	return i-1;
     }
     throw "position was not found";
   }
-  */
 
-  /*
+  bool local_check_shock_reached
+  (const HydroSimulation& sim,
+   double r)
+  {
+    const vector<double>& grid =
+      sim.getSnapshot().grid;
+    if(r<grid.front())
+      return false;
+    if(r>grid.back())
+      return false;
+    const size_t pindex =
+      find_position_index(grid,r);
+    return sim.getSnapshot().cells.at(pindex).velocity>1e-2;
+  }
+
+#ifdef WITH_MPI
+  bool logical_or(bool arg_1, bool arg_2)
+  {
+    return arg_1 || arg_2;
+  }
+#endif // WITH_MPI
+
+  bool check_shock_reached
+  (const HydroSimulation& sim,
+   double r)
+  {
+#ifndef WITH_MPI
+    return local_check_shock_reached(sim,r);
+#else
+    const bool local_res = local_check_shock_reached(sim,r);
+    bool res;
+    boost::mpi::all_reduce
+      (sim.getWorld(),
+       local_res,
+       res,
+       logical_or);
+    return res;
+#endif // WITH_MPI
+  }
+
   class SelfSimilarSnapshots
   {
   public:
@@ -45,20 +82,23 @@ namespace {
     {
       const HydroSnapshot hs = sim.getSnapshot();
       const double r = r_min_*pow(2.0,counter_);
-      if(r>hs.grid.back())
-	return;
-      const size_t pindex = find_positive_index
-	(hs.grid, r);
-      if(!(hs.cells.at(pindex).velocity > 1e-2))
-	return;
-      write_snapshot_to_hdf5(sim,"snapshot_"+boost::lexical_cast<string>(counter_)+".h5");
-      ++counter_;
+      if(check_shock_reached(sim,r)){
+	write_snapshot_to_hdf5
+	  (sim,
+	   "snapshot_"+
+	   boost::lexical_cast<string>(counter_)+
+#ifdef WITH_MPI
+	   "_"+boost::lexical_cast<string>(sim.getWorld().rank())+
+#endif // WITH_MPI
+	   ".h5");
+	++counter_;
+      }
     }
 
   private:
     const double r_min_;
     mutable int counter_;
-    };*/
+    };
 
   bool shock_reached_end
   (const HydroSnapshot& hs
@@ -98,7 +138,7 @@ void my_main_loop
 #endif // WITH_MPI
 
   assert(sim.getSnapshot().cells.size()>10);
-  //  const SelfSimilarSnapshots diag(1);
+  const SelfSimilarSnapshots diag(1);
   while(!shock_reached_end
 	(sim.getSnapshot()
 #ifdef WITH_MPI
@@ -111,7 +151,7 @@ void my_main_loop
     if(world.rank()==0)
 #endif // WITH_MPI
       write_number(sim.getTime(),"time.txt");
-    //    diag(sim);
+    diag(sim);
   }
 
 #ifdef WITH_MPI

@@ -68,6 +68,10 @@ public:
    */
   int getCycle(void) const;
 
+#ifdef WITH_MPI
+  const boost::mpi::communicator& getWorld(void) const;
+#endif // WITH_MPI
+
 private:
 
 #ifdef WITH_MPI
