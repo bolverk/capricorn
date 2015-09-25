@@ -49,10 +49,8 @@ HydroSnapshot calc_init_cond
   for(size_t i=left_boundary;i<right_boundary;++i)
     local_cells.push_back(cells.at(i));
   vector<double> local_grid;
-  if(world.rank()==0)
-    local_grid.push_back(cell_edges.at(0));
-  for(size_t i=left_boundary;i<right_boundary;++i)
-    local_grid.push_back(cell_edges.at(i+1));
+  for(size_t i=left_boundary;i<right_boundary+1;++i)
+    local_grid.push_back(cell_edges.at(i));
   return HydroSnapshot(local_grid, local_cells);
 #else
   return HydroSnapshot(cell_edges, cells);

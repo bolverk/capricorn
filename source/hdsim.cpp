@@ -29,7 +29,7 @@ HydroSimulation::HydroSimulation
 #ifdef WITH_MPI
   ,
   world_(world),
-  left_ghost_edge_(0),
+  left_ghost_(),
   right_ghost_()
 #endif // WITH_MPI
 {
@@ -45,10 +45,10 @@ void HydroSimulation::huddle(void)
   vector<boost::mpi::request> right(2);
   if(world_.rank()>0){
     left.at(0) = world_.isend(world_.rank()-1,0,hs_.cells.front());
-    left.at(1) = world_.irecv(world_.rank()-1,1,left_ghost_edge_);
+    left.at(1) = world_.irecv(world_.rank()-1,1,left_ghost_);
   }
   if(world_.rank()<world_.size()-1){
-    right.at(0) = world_.isend(world_.rank()+1,1,hs_.grid.back());
+    right.at(0) = world_.isend(world_.rank()+1,1,hs_.cells.back());
     right.at(1) = world_.irecv(world_.rank()+1,0,right_ghost_);
   }
   if(world_.rank()>0)
@@ -60,30 +60,19 @@ void HydroSimulation::huddle(void)
 const vector<RiemannSolution> HydroSimulation::calc_pcm_fluxes
 (void) const
 {
-  const vector<Primitive>& cells = hs_.cells;
   vector<RiemannSolution> res(hs_.grid.size());
-  if(world_.rank()==0){
-    res.at(0) = bc_.calcFluxLeft(hs_);
-    for(size_t i=1;i<res.size()-1;++i)
-      res.at(i) = rs_
-	(pair<Primitive,Primitive>
-	 (cells.at(i-1),
-	  cells.at(i)));
-    res.back() = rs_
+  res.front() = world_.rank()==0 ?
+    bc_.calcFluxLeft(hs_) :
+    rs_(pair<Primitive,Primitive>
+	(left_ghost_,hs_.cells.at(0)));
+  for(size_t i=1;i<res.size()-1;++i)
+    res.at(i) = rs_
       (pair<Primitive,Primitive>
-       (cells.back(),
-	right_ghost_));
-  }
-  else{
-    for(size_t i=0;i<res.size()-1;++i)
-      res.at(i) = rs_
-	(pair<Primitive,Primitive>
-	 (cells.at(i),cells.at(i+1)));
-    res.back() = world_.size() - 1 == world_.rank() ?
-      bc_.calcFluxRight(hs_) :
-      rs_(pair<Primitive,Primitive>
-	  (cells.back(),right_ghost_));
-  }
+       (hs_.cells.at(i-1),hs_.cells.at(i)));
+  res.back() = world_.rank()==world_.size()-1 ?
+    bc_.calcFluxRight(hs_) :
+    rs_(pair<Primitive,Primitive>
+	(hs_.cells.front(),right_ghost_));
   return res;
 }
 
@@ -108,10 +97,7 @@ namespace {
 
 double HydroSimulation::calc_time_step(void) const
 {
-  const vector<double> grid =
-    world_.rank()==0 ?
-    hs_.grid :
-    prepend(left_ghost_edge_, hs_.grid);
+  const vector<double>& grid = hs_.grid;
   const vector<Primitive>& cells = hs_.cells;
   double max_its = 0;
   for(size_t i=0;i<cells.size();++i){

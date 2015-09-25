@@ -93,7 +93,7 @@ private:
   ColdFlows cold_flows_;
 #ifdef WITH_MPI
   const boost::mpi::communicator& world_;
-  double left_ghost_edge_;
+  Primitive left_ghost_;
   Primitive right_ghost_;
 #endif // WITH_MPI
 };
